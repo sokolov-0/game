@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: a87a3b5865bf74ef7a192b24af4efd85
+guid: 159695307ebf080479f136d9534424df
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6784948397699196557
-    second: png-klev-club-wdc8-p-soldat-sverkhu-png-5_0
+      213: -6527996836202335780
+    second: 3256b5fc-df26-41c6-a92e-ec89b5b4de1b_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -96,30 +96,17 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 4
-    buildTarget: WebGL
-    maxTextureSize: 2048
-    resizeAlgorithm: 0
-    textureFormat: -1
-    textureCompression: 1
-    compressionQuality: 50
-    crunchedCompression: 0
-    allowsAlphaSplitting: 0
-    overridden: 0
-    ignorePlatformSupport: 0
-    androidETC2FallbackOverride: 0
-    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: png-klev-club-wdc8-p-soldat-sverkhu-png-5_0
+      name: 3256b5fc-df26-41c6-a92e-ec89b5b4de1b_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 185
-        height: 326
+        x: 1
+        y: 8
+        width: 63
+        height: 51
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d8667389e9af82e50800000000000000
-      internalID: 6784948397699196557
+      spriteID: cd1394bd675e765a0800000000000000
+      internalID: -6527996836202335780
       vertices: []
       indices: 
       edges: []
@@ -148,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      png-klev-club-wdc8-p-soldat-sverkhu-png-5_0: 6784948397699196557
+      3256b5fc-df26-41c6-a92e-ec89b5b4de1b_0: -6527996836202335780
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
