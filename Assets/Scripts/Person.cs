@@ -15,7 +15,8 @@ public class Person : MonoBehaviour
     [SerializeField] private float bulletSpeed = 10f;
     [SerializeField] private float bulletOffset = 0.5f;
     [SerializeField] private LayerMask bulletLayer;
-    [SerializeField] private int maxHealth = 3;
+    [SerializeField] private int maxHealth = 100;
+    private int currentHealth;
 
     [Header("Debug")]
     [SerializeField] private bool drawGizmos = true;
@@ -27,17 +28,20 @@ public class Person : MonoBehaviour
     private float currentRotation;
     private Vector2 lastMoveDirection = Vector2.up;
     private bool hasShotDuringCurrentMove = false;
-    private int currentHealth;
+    public int CurrentHealth => currentHealth;
+    public int MaxHealth => maxHealth;
     private SpriteRenderer spriteRenderer;
+
+    private void Awake()
+   {
+       // Устанавливаем HP раньше любого Start
+       currentHealth = maxHealth;
+   }
 
     void Start()
     {
-
-
-        currentHealth = maxHealth;
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        if (UIManager.Instance != null)
-        UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
+        Debug.Log("Person.Start calls UIManager: " + (UIManager.Instance != null));
+        UIManager.Instance?.UpdatePlayerHealth(currentHealth, maxHealth);
     }
 
     void Update()
@@ -49,17 +53,10 @@ public class Person : MonoBehaviour
     public void TakeDamage(int damage)
     {
 
-        currentHealth -= damage;
+        currentHealth = Mathf.Max(currentHealth - damage, 0);
         Debug.Log($"Player hit! Health: {currentHealth}");
-
-        // Обновляем UI
-        if (UIManager.Instance != null)
-            UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
-
-        if (currentHealth <= 0)
-        {
-            Die();
-        }
+        UIManager.Instance?.UpdatePlayerHealth(currentHealth, maxHealth);
+        if (currentHealth == 0) Die();
 
     }
 
@@ -75,17 +72,20 @@ public class Person : MonoBehaviour
         if (other.CompareTag("EnemyBullet"))
         {
             Destroy(other.gameObject);
-            TakeDamage(1);
+            TakeDamage(25);
         }
         else if(other.CompareTag("Health"))
         {
-            if(currentHealth != maxHealth)
+            if (currentHealth < maxHealth)
             {
-                currentHealth++;
                 Destroy(other.gameObject);
+                currentHealth = Mathf.Min(currentHealth + 10, maxHealth);  // +10 HP
+                UIManager.Instance?.UpdatePlayerHealth(currentHealth, maxHealth);
+                
             }
+         }
         }
-    }
+    
 
     private void HandleMovementInput()
     {

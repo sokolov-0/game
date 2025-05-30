@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class АIEnemy : MonoBehaviour
+public class AIEnemy : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 3f;
@@ -15,7 +15,10 @@ public class АIEnemy : MonoBehaviour
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private float bulletSpeed = 7f;
     [SerializeField] private float bulletOffset = 0.5f;
-    [SerializeField] private int maxHealth = 3;
+    [SerializeField] private int maxHealth = 100;
+    private int currentHealth;
+    public int CurrentHealth => currentHealth;
+    public int MaxHealth     => maxHealth;
 
     private Transform player;
     private float nextFireTime;
@@ -24,12 +27,22 @@ public class АIEnemy : MonoBehaviour
     private Vector2 lastMoveDirection = Vector2.down;
     private float currentRotation;
     private bool hasShotDuringCurrentMove = false;
-    private int currentHealth;
+
+    private void Awake()
+    {
+        GameObject ply = GameObject.FindGameObjectWithTag("Player");
+        if (ply != null)
+            player = ply.transform;
+
+        currentHealth = maxHealth;
+        UIManager.Instance?.UpdateEnemyHealth(currentHealth, maxHealth);
+   }
+    
 
     void Start()
     {
-        player = GameObject.FindGameObjectWithTag("Player").transform;
-        currentHealth = maxHealth;
+        
+        //UIManager.Instance?.UpdateEnemyHealth(currentHealth, maxHealth);
     }
 
     void Update()
@@ -53,13 +66,10 @@ public class АIEnemy : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        currentHealth -= damage;
+        currentHealth = Mathf.Max(currentHealth - damage, 0);
         Debug.Log($"Enemy hit! Health: {currentHealth}");
-
-        if (currentHealth <= 0)
-        {
-            Die();
-        }
+        UIManager.Instance?.UpdateEnemyHealth(currentHealth, maxHealth);
+        if (currentHealth == 0) Die();
     }
 
     private void Die()
@@ -72,16 +82,14 @@ public class АIEnemy : MonoBehaviour
     {
         if (other.CompareTag("PlayerBullet"))
         {
-            Destroy(other.gameObject); // Уничтожаем пулю
-            TakeDamage(1); // Наносим урон
+            Destroy(other.gameObject);
+            TakeDamage(25);
         }
-        else if(other.CompareTag("Health"))
-        {;
-            if(currentHealth != maxHealth)
-            {
-                currentHealth++;
-                Destroy(other.gameObject);
-            }
+        else if (other.CompareTag("Health"))
+        {
+            Destroy(other.gameObject);
+            currentHealth = Mathf.Min(currentHealth + 10, maxHealth);
+            UIManager.Instance?.UpdateEnemyHealth(currentHealth, maxHealth);
         }
     }
 
