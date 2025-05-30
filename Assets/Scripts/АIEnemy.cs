@@ -160,7 +160,7 @@ public class АIEnemy : MonoBehaviour
         Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
         if (bulletRb != null)
         {
-            bulletRb.velocity = lastMoveDirection * bulletSpeed;
+            bulletRb.linearVelocity = lastMoveDirection * bulletSpeed;
             float angle = Mathf.Atan2(lastMoveDirection.y, lastMoveDirection.x) * Mathf.Rad2Deg - 90;
             bullet.transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
         }

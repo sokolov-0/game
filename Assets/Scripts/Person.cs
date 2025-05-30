@@ -32,8 +32,12 @@ public class Person : MonoBehaviour
 
     void Start()
     {
+
+
         currentHealth = maxHealth;
         spriteRenderer = GetComponent<SpriteRenderer>();
+        if (UIManager.Instance != null)
+        UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
     }
 
     void Update()
@@ -48,16 +52,21 @@ public class Person : MonoBehaviour
         currentHealth -= damage;
         Debug.Log($"Player hit! Health: {currentHealth}");
 
+        // РћР±РЅРѕРІР»СЏРµРј UI
+        if (UIManager.Instance != null)
+            UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
+
         if (currentHealth <= 0)
         {
             Die();
         }
+
     }
 
     private void Die()
     {
         Debug.Log("Player defeated!");
-        // Здесь может быть перезагрузка уровня или другие действия
+        // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         Destroy(gameObject);
     }
 
@@ -167,12 +176,12 @@ public class Person : MonoBehaviour
 
         Vector2 spawnPosition = (Vector2)transform.position + lastMoveDirection * bulletOffset;
         GameObject bullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
-        bullet.tag = "PlayerBullet"; // Устанавливаем тег для пули игрока
+        bullet.tag = "PlayerBullet"; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 
         Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
         if (bulletRb != null)
         {
-            bulletRb.velocity = lastMoveDirection * bulletSpeed;
+            bulletRb.linearVelocity = lastMoveDirection * bulletSpeed;
             float angle = Mathf.Atan2(lastMoveDirection.y, lastMoveDirection.x) * Mathf.Rad2Deg;
             bullet.transform.rotation = Quaternion.AngleAxis(angle - 90, Vector3.forward);
         }
