@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      police_patrol_color_0: 5916477897049482424
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

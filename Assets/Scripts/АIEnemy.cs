@@ -6,7 +6,8 @@ public class АIEnemy : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 3f;
-    [SerializeField] private float moveDistance = 1f;
+    [SerializeField] private bool smoothRotation = true;
+    [SerializeField] private float rotationSpeed = 360f;
 
     [Header("Combat Settings")]
     [SerializeField] private float detectionRange = 5f;
@@ -17,19 +18,31 @@ public class АIEnemy : MonoBehaviour
     [SerializeField] private float bulletOffset = 0.5f;
     [SerializeField] private int maxHealth = 3;
 
+    [Header("Obstacle Avoidance")]
+    [SerializeField] private float avoidanceDistance = 1f;
+    [SerializeField] private LayerMask obstacleLayer;
+
     private Transform player;
     private float nextFireTime;
-    private Vector2 targetPosition;
-    private bool isMoving = false;
-    private Vector2 lastMoveDirection = Vector2.down;
+    private Vector2 moveDirection;
+    private float targetRotation;
     private float currentRotation;
-    private bool hasShotDuringCurrentMove = false;
+    private Vector2 lastMoveDirection = Vector2.down;
     private int currentHealth;
+    private Rigidbody2D rb;
+    private Vector2[] checkDirections = new Vector2[] { Vector2.up, Vector2.right, Vector2.down, Vector2.left };
 
     void Start()
     {
         player = GameObject.FindGameObjectWithTag("Player").transform;
         currentHealth = maxHealth;
+        rb = GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
+            rb.freezeRotation = true;
+        }
     }
 
     void Update()
@@ -40,14 +53,30 @@ public class АIEnemy : MonoBehaviour
 
         if (distanceToPlayer <= detectionRange)
         {
-            HandleMovement();
+            CalculateMovementDirection();
+            HandleRotation();
 
-            if (distanceToPlayer <= attackRange && Time.time >= nextFireTime && !hasShotDuringCurrentMove)
+            if (distanceToPlayer <= attackRange && Time.time >= nextFireTime)
             {
                 Shoot();
                 nextFireTime = Time.time + 1f / fireRate;
-                hasShotDuringCurrentMove = true;
             }
+        }
+        else
+        {
+            moveDirection = Vector2.zero;
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (moveDirection != Vector2.zero)
+        {
+            rb.velocity = moveDirection * moveSpeed;
+        }
+        else
+        {
+            rb.velocity = Vector2.zero;
         }
     }
 
@@ -68,84 +97,79 @@ public class АIEnemy : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (other.CompareTag("PlayerBullet"))
+        if (collision.gameObject.CompareTag("PlayerBullet"))
         {
-            Destroy(other.gameObject); // Уничтожаем пулю
-            TakeDamage(1); // Наносим урон
+            Destroy(collision.gameObject);
+            TakeDamage(1);
         }
-        else if(other.CompareTag("Health"))
-        {;
-            if(currentHealth != maxHealth)
+        else if (collision.gameObject.CompareTag("Health"))
+        {
+            if (currentHealth != maxHealth)
             {
                 currentHealth++;
-                Destroy(other.gameObject);
+                Destroy(collision.gameObject);
             }
         }
     }
 
-    private void HandleMovement()
+    private void CalculateMovementDirection()
     {
-        if (!isMoving)
+        Vector2 directionToPlayer = (player.position - transform.position).normalized;
+        Vector2 avoidanceDirection = GetObstacleAvoidanceDirection();
+
+        // Комбинируем направление к игроку и направление избегания препятствий
+        moveDirection = (directionToPlayer + avoidanceDirection * 0.5f).normalized;
+
+        if (moveDirection != Vector2.zero)
         {
-            // Определяем направление к игроку
-            Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
+            lastMoveDirection = moveDirection;
+        }
+    }
 
-            // Округляем направление до ближайшего из 4-х основных направлений
-            Vector2 roundedDirection = RoundDirection(direction);
-            lastMoveDirection = roundedDirection;
+    private Vector2 GetObstacleAvoidanceDirection()
+    {
+        Vector2 avoidanceDirection = Vector2.zero;
 
-            // Начинаем движение
-            StartMovement(roundedDirection);
-            // Сбрасываем флаг выстрела при начале нового движения
-            hasShotDuringCurrentMove = false;
+        foreach (Vector2 dir in checkDirections)
+        {
+            RaycastHit2D hit = Physics2D.Raycast(transform.position, dir, avoidanceDistance, obstacleLayer);
+            if (hit.collider != null)
+            {
+                // Чем ближе препятствие, тем сильнее уклонение
+                float avoidanceForce = 1f - (hit.distance / avoidanceDistance);
+                avoidanceDirection -= dir * avoidanceForce;
+            }
+        }
+
+        return avoidanceDirection.normalized;
+    }
+
+    private void HandleRotation()
+    {
+        if (moveDirection != Vector2.zero)
+        {
+            targetRotation = Vector2.SignedAngle(Vector2.up, moveDirection);
         }
         else
         {
-            // Продолжаем текущее движение
-            PerformMovement();
+            targetRotation = Vector2.SignedAngle(Vector2.up, lastMoveDirection);
         }
-    }
 
-    private Vector2 RoundDirection(Vector2 direction)
-    {
-        // Округляем направление до ближайшего из 4-х основных направлений
-        if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
+        if (smoothRotation)
         {
-            return direction.x > 0 ? Vector2.right : Vector2.left;
+            currentRotation = Mathf.MoveTowardsAngle(
+                currentRotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
+            transform.rotation = Quaternion.Euler(0, 0, currentRotation);
         }
         else
         {
-            return direction.y > 0 ? Vector2.up : Vector2.down;
-        }
-    }
-
-    private void StartMovement(Vector2 direction)
-    {
-        targetPosition = (Vector2)transform.position + direction * moveDistance;
-        isMoving = true;
-
-        // Устанавливаем поворот
-        float targetAngle = Vector2.SignedAngle(Vector2.up, direction);
-        currentRotation = targetAngle;
-        transform.rotation = Quaternion.Euler(0, 0, currentRotation);
-    }
-
-    private void PerformMovement()
-    {
-        // Плавное перемещение
-        transform.position = Vector2.MoveTowards(
-            transform.position,
-            targetPosition,
-            moveSpeed * Time.deltaTime
-        );
-
-        // Проверка завершения движения
-        if (Vector2.Distance(transform.position, targetPosition) < 0.01f)
-        {
-            transform.position = targetPosition;
-            isMoving = false;
+            transform.rotation = Quaternion.Euler(0, 0, targetRotation);
+            currentRotation = targetRotation;
         }
     }
 
@@ -156,13 +180,19 @@ public class АIEnemy : MonoBehaviour
         Vector2 spawnPosition = (Vector2)transform.position + lastMoveDirection * bulletOffset;
         GameObject bullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
         bullet.tag = "EnemyBullet";
-        // Направление пули
+
         Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
         if (bulletRb != null)
         {
             bulletRb.velocity = lastMoveDirection * bulletSpeed;
             float angle = Mathf.Atan2(lastMoveDirection.y, lastMoveDirection.x) * Mathf.Rad2Deg - 90;
             bullet.transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
+        }
+
+        // Добавляем коллайдер, если его нет
+        if (bullet.GetComponent<Collider2D>() == null)
+        {
+            bullet.AddComponent<BoxCollider2D>();
         }
 
         Destroy(bullet, 3f);
@@ -175,5 +205,12 @@ public class АIEnemy : MonoBehaviour
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        // Визуализация лучей для обнаружения препятствий
+        Gizmos.color = Color.blue;
+        foreach (Vector2 dir in checkDirections)
+        {
+            Gizmos.DrawLine(transform.position, transform.position + (Vector3)dir * avoidanceDistance);
+        }
     }
 }

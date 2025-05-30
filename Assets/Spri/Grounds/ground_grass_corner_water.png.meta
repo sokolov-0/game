@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      ground_grass_corner_water_0: -8279517368011329542
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
