@@ -6,7 +6,6 @@ public class Person : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float moveDistance = 1f;
     [SerializeField] private bool smoothRotation = true;
     [SerializeField] private float rotationSpeed = 360f;
 
@@ -16,70 +15,100 @@ public class Person : MonoBehaviour
     [SerializeField] private float bulletOffset = 0.5f;
     [SerializeField] private LayerMask bulletLayer;
     [SerializeField] private int maxHealth = 3;
+    [SerializeField] private GameObject cripsPrefab;
+    [SerializeField] private GameObject bloodsPrefab;
 
     [Header("Debug")]
     [SerializeField] private bool drawGizmos = true;
 
-    private Vector2 targetPosition;
-    private bool isMoving = false;
-    private Vector2 startPosition;
+    private Vector2 moveDirection;
     private float targetRotation;
     private float currentRotation;
     private Vector2 lastMoveDirection = Vector2.up;
-    private bool hasShotDuringCurrentMove = false;
     private int currentHealth;
     private SpriteRenderer spriteRenderer;
+    private Rigidbody2D rb;
+    private bool canShoot = true;
 
     void Start()
     {
-
-
         currentHealth = maxHealth;
         spriteRenderer = GetComponent<SpriteRenderer>();
-        if (UIManager.Instance != null)
-        UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
+        rb = GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
+            rb.freezeRotation = true;
+        }
+
+        GameObject playerObj = GameObject.FindWithTag("Player");
+        GameObject enemyObj = GameObject.FindWithTag("Enemy");
+
+        if (playerObj == null || enemyObj == null)
+        {
+            Debug.LogError("Player or Enemy not found in scene!");
+            return;
+        }
+
+        if (SideSelector.SelectedSide == "Crips")
+        {
+            playerObj.transform.position = new Vector2(-12.5f, 0.5f);
+            enemyObj.transform.position = new Vector2(12.5f, 0.5f);
+        }
+        else
+        {
+            playerObj.transform.position = new Vector2(12.5f, 0.5f);
+            enemyObj.transform.position = new Vector2(-12.5f, 0.5f);
+        }
     }
 
     void Update()
     {
         HandleMovementInput();
         HandleShootingInput();
+        HandleRotation();
+    }
+
+    void FixedUpdate()
+    {
+        if (moveDirection != Vector2.zero)
+        {
+            rb.linearVelocity = moveDirection * moveSpeed;
+        }
+        else
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
     }
 
     public void TakeDamage(int damage)
     {
-
         currentHealth -= damage;
         Debug.Log($"Player hit! Health: {currentHealth}");
-
-        // Обновляем UI
-        if (UIManager.Instance != null)
-            UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
 
         if (currentHealth <= 0)
         {
             Die();
         }
-
     }
 
     private void Die()
     {
         Debug.Log("Player defeated!");
-        // ����� ����� ���� ������������ ������ ��� ������ ��������
         Destroy(gameObject);
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnCollisionEnter2D(Collision2D other)
     {
-        if (other.CompareTag("EnemyBullet"))
+        if (other.gameObject.CompareTag("EnemyBullet"))
         {
             Destroy(other.gameObject);
             TakeDamage(1);
         }
-        else if(other.CompareTag("Health"))
+        else if (other.gameObject.CompareTag("Health"))
         {
-            if(currentHealth != maxHealth)
+            if (currentHealth != maxHealth)
             {
                 currentHealth++;
                 Destroy(other.gameObject);
@@ -89,61 +118,50 @@ public class Person : MonoBehaviour
 
     private void HandleMovementInput()
     {
-        if (!isMoving)
-        {
-            Vector2 newDirection = GetInputDirection();
-            if (newDirection != Vector2.zero)
-            {
-                StartMovement(newDirection);
-                hasShotDuringCurrentMove = false;
-            }
-        }
-        else
-        {
-            PerformMovement();
-        }
-    }
+        Vector2 inputDirection = Vector2.zero;
 
-    private Vector2 GetInputDirection()
-    {
-        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)) return Vector2.up;
-        if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow)) return Vector2.down;
-        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow)) return Vector2.left;
-        if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow)) return Vector2.right;
-        return Vector2.zero;
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) inputDirection += Vector2.up;
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) inputDirection += Vector2.down;
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) inputDirection += Vector2.left;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) inputDirection += Vector2.right;
+
+        moveDirection = inputDirection.normalized;
+
+        if (moveDirection != Vector2.zero)
+        {
+            lastMoveDirection = moveDirection;
+            canShoot = true;
+        }
     }
 
     private void HandleShootingInput()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) && canShoot)
         {
-            if (isMoving && !hasShotDuringCurrentMove)
-            {
-                ShootFromPlayer();
-                hasShotDuringCurrentMove = true;
-            }
+            ShootFromPlayer();
+            canShoot = false;
+            StartCoroutine(ResetShootCooldown());
         }
     }
 
-    private void StartMovement(Vector2 direction)
+    private IEnumerator ResetShootCooldown()
     {
-        startPosition = transform.position;
-        targetPosition = startPosition + direction * moveDistance;
-        isMoving = true;
-        lastMoveDirection = direction;
-
-        targetRotation = Vector2.SignedAngle(Vector2.up, direction);
-
-        if (!smoothRotation)
-        {
-            transform.rotation = Quaternion.Euler(0, 0, targetRotation);
-            currentRotation = targetRotation;
-        }
+        yield return new WaitForSeconds(0.1f); // Небольшая задержка перед следующим выстрелом
+        canShoot = true;
     }
 
-    private void PerformMovement()
+    private void HandleRotation()
     {
-        if (smoothRotation && Mathf.Abs(currentRotation - targetRotation) > 0.1f)
+        if (moveDirection != Vector2.zero)
+        {
+            targetRotation = Vector2.SignedAngle(Vector2.up, moveDirection);
+        }
+        else
+        {
+            targetRotation = Vector2.SignedAngle(Vector2.up, lastMoveDirection);
+        }
+
+        if (smoothRotation)
         {
             currentRotation = Mathf.MoveTowardsAngle(
                 currentRotation,
@@ -152,17 +170,10 @@ public class Person : MonoBehaviour
             );
             transform.rotation = Quaternion.Euler(0, 0, currentRotation);
         }
-
-        transform.position = Vector2.MoveTowards(
-            transform.position,
-            targetPosition,
-            moveSpeed * Time.deltaTime
-        );
-
-        if (Vector2.Distance(transform.position, targetPosition) < 0.01f)
+        else
         {
-            transform.position = targetPosition;
-            isMoving = false;
+            transform.rotation = Quaternion.Euler(0, 0, targetRotation);
+            currentRotation = targetRotation;
         }
     }
 
@@ -176,7 +187,7 @@ public class Person : MonoBehaviour
 
         Vector2 spawnPosition = (Vector2)transform.position + lastMoveDirection * bulletOffset;
         GameObject bullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
-        bullet.tag = "PlayerBullet"; // ������������� ��� ��� ���� ������
+        bullet.tag = "PlayerBullet";
 
         Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
         if (bulletRb != null)
@@ -185,8 +196,8 @@ public class Person : MonoBehaviour
             float angle = Mathf.Atan2(lastMoveDirection.y, lastMoveDirection.x) * Mathf.Rad2Deg;
             bullet.transform.rotation = Quaternion.AngleAxis(angle - 90, Vector3.forward);
         }
+
         Destroy(bullet, 3f);
-        //bullet.AddComponent<BulletLife>().Initialize(2f);
     }
 
     private void OnDrawGizmosSelected()

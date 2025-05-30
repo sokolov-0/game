@@ -107,6 +107,7 @@ public class Trail : MonoBehaviour
     private int trailLayerIndex;
     private Transform trailParent;
 
+
     void Start()
     {
         isPlayer = CompareTag("Player");

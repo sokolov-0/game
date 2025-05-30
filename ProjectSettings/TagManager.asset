@@ -7,15 +7,17 @@ TagManager:
   - Health
   - EnemyBullet
   - PlayerBullet
+  - Enemy
+  - Buildings
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Player
   - Water
   - UI
-  - 
-  - 
+  - Grid
+  - Enemy
   - 
   - 
   - 
