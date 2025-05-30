@@ -16,6 +16,8 @@ public class Person : MonoBehaviour
     [SerializeField] private float bulletOffset = 0.5f;
     [SerializeField] private LayerMask bulletLayer;
     [SerializeField] private int maxHealth = 3;
+    [SerializeField] private GameObject cripsPrefab;
+    [SerializeField] private GameObject bloodsPrefab;
 
     [Header("Debug")]
     [SerializeField] private bool drawGizmos = true;
@@ -32,15 +34,32 @@ public class Person : MonoBehaviour
 
     void Start()
     {
-        currentHealth = maxHealth;
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        GameObject playerObj = GameObject.FindWithTag("Player");
+        GameObject enemyObj = GameObject.FindWithTag("Enemy");
+
+        if (playerObj == null || enemyObj == null)
+        {
+            Debug.LogError("Player or Enemy not found in scene!");
+            return;
+        }
+
+        if (SideSelector.SelectedSide == "Crips")
+        {
+            playerObj.transform.position = new Vector2(-12.5f, 0.5f);
+            enemyObj.transform.position = new Vector2(12.5f, 0.5f);
+        }
+        else
+        {
+            playerObj.transform.position = new Vector2(12.5f, 0.5f);
+            enemyObj.transform.position = new Vector2(-12.5f, 0.5f);
+        }
     }
 
     void Update()
-    {
-        HandleMovementInput();
-        HandleShootingInput();
-    }
+        {
+            HandleMovementInput();
+            HandleShootingInput();
+        }
 
     public void TakeDamage(int damage)
     {
